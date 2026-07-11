@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>东方财富自选股</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* 头部 */
+    .header {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      color: #fff;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      color: #8892b0;
+      font-size: 1rem;
+    }
+
+    /* 搜索框 */
+    .search-box {
+      display: flex;
+      gap: 10px;
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 15px 20px;
+      border: 2px solid #333;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #4ecdc4;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .search-box button {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4ecdc4, #44a08d);
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(78, 205, 196, 0.4);
+    }
+
+    /* 搜索结果 */
+    .search-results {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .search-results.show {
+      display: block;
+    }
+
+    .search-results h3 {
+      color: #4ecdc4;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    .search-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .search-item:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .search-item .code {
+      color: #8892b0;
+      font-size: 0.85rem;
+    }
+
+    .search-item .name {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .search-item .market {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background: rgba(78, 205, 196, 0.2);
+      color: #4ecdc4;
+    }
+
+    /* 自选股表格 */
+    .watchlist-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 25px;
+      backdrop-filter: blur(10px);
+    }
+
+    .watchlist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .watchlist-header h2 {
+      color: #fff;
+      font-size: 1.3rem;
+    }
+
+    .watchlist-header .stats {
+      color: #8892b0;
+      font-size: 0.9rem;
+    }
+
+    .stock-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .stock-table th {
+      text-align: left;
+      padding: 12px;
+      color: #8892b0;
+      font-weight: 500;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .stock-table td {
+      padding: 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .stock-table tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .stock-name {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stock-name .name {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .stock-name .code {
+      color: #8892b0;
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .price {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .change {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .change-percent {
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-align: center;
+      min-width: 70px;
+    }
+
+    .change-percent.up {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .change-percent.down {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .change-amount {
+      font-size: 0.8rem;
+      color: #8892b0;
+      margin-top: 4px;
+    }
+
+    .market-cap {
+      color: #8892b0;
+    }
+
+    .fund-flow {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .fund-main {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .fund-main.up {
+      color: #ef4444;
+    }
+
+    .fund-main.down {
+      color: #22c55e;
+    }
+
+    .fund-detail {
+      font-size: 0.75rem;
+      color: #8892b0;
+      margin-top: 2px;
+    }
+
+    .remove-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .remove-btn:hover {
+      background: rgba(239, 68, 68, 0.4);
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8892b0;
+    }
+
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    /* 加载动画 */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #4ecdc4;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 刷新按钮 */
+    .refresh-btn {
+      padding: 8px 16px;
+      border: 1px solid #4ecdc4;
+      border-radius: 8px;
+      background: transparent;
+      color: #4ecdc4;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(78, 205, 196, 0.1);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.8rem;
+      }
+
+      .search-box {
+        flex-direction: column;
+      }
+
+      .stock-table {
+        font-size: 0.85rem;
+      }
+
+      .stock-table th:nth-child(4),
+      .stock-table td:nth-child(4) {
+        display: none;
+      }
+    }
+
+    /* 通知 */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      background: #333;
+      color: #fff;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      transform: translateX(150%);
+      transition: transform 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .toast.error {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <h1>📈 东方财富自选股</h1>
+      <p>实时行情 · 自选管理 · 智能搜索</p>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="输入股票代码或名称搜索（如：宁德、300750）..." />
+      <button onclick="searchStock()">🔍 搜索</button>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div class="search-results" id="searchResults">
+      <h3>🔍 搜索结果</h3>
+      <div id="searchList"></div>
+    </div>
+
+    <!-- 自选股列表 -->
+    <div class="watchlist-section">
+      <div class="watchlist-header">
+        <h2>⭐ 我的自选股</h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span class="stats" id="stats">加载中...</span>
+          <button class="refresh-btn" id="refreshBtn" onclick="loadWatchlist()">🔄 刷新</button>
+        </div>
+      </div>
+
+      <div id="watchlistContainer">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p>暂无自选股，请搜索添加</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通知 -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ============ API 调用 ============
+
+    async function apiCall(endpoint, params = {}) {
+      const queryString = new URLSearchParams(params).toString();
+      const url = `/api${endpoint}${queryString ? '?' + queryString : ''}`;
+      const response = await fetch(url);
+      return await response.json();
+    }
+
+    // ============ 搜索功能 ============
+
+    async function searchStock() {
+      const keyword = document.getElementById('searchInput').value.trim();
+      if (!keyword) {
+        showToast('请输入搜索关键词', 'error');
+        return;
+      }
+
+      const result = await apiCall('/search', { keyword });
+      
+      if (!result.success) {
+        showToast(result.error, 'error');
+        return;
+      }
+
+      displaySearchResults(result.data);
+    }
+
+    function displaySearchResults(results) {
+      const container = document.getElementById('searchList');
+      const searchResults = document.getElementById('searchResults');
+
+      if (results.length === 0) {
+        container.innerHTML = '<p style="color: #8892b0; padding: 10px;">未找到匹配的股票</p>';
+      } else {
+        container.innerHTML = results.map(item => `
+          <div class="search-item" onclick="addToWatchlist('${item.code}', '${item.name}', '${item.market}')">
+            <span class="name">${item.name}</span>
+            <span class="code">${item.code}</span>
+            <span class="market">${item.market}</span>
+          </div>
+        `).join('');
+      }
+
+      searchResults.classList.add('show');
+    }
+
+    // 回车搜索
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchStock();
+    });
+
+    // ============ 自选股管理 ============
+
+    async function loadWatchlist() {
+      const container = document.getElementById('watchlistContainer');
+      const refreshBtn = document.getElementById('refreshBtn');
+      
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="loading"></span>';
+
+      try {
+        const result = await apiCall('/watchlist/quotes');
+        
+        if (!result.success) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        displayWatchlist(result.data);
+      } catch (error) {
+        showToast('加载失败: ' + error.message, 'error');
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '🔄 刷新';
+      }
+    }
+
+    function displayWatchlist(stocks) {
+      const container = document.getElementById('watchlistContainer');
+      const stats = document.getElementById('stats');
+
+      if (stocks.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p>暂无自选股，请搜索添加</p>
+          </div>
+        `;
+        stats.textContent = '共 0 只';
+        return;
+      }
+
+      // 统计涨跌
+      const rising = stocks.filter(s => s.quote && s.quote.changePercent > 0).length;
+      const falling = stocks.filter(s => s.quote && s.quote.changePercent < 0).length;
+      stats.textContent = `共 ${stocks.length} 只 · 📈${rising} 📉${falling}`;
+
+      const rows = stocks.map(stock => {
+        const q = stock.quote;
+        if (!q) {
+          return `
+            <tr>
+              <td>
+                <div class="stock-name">
+                  <span class="name">${stock.name}</span>
+                  <span class="code">${stock.code} · ${stock.market}</span>
+                </div>
+              </td>
+              <td colspan="3" style="color: #8892b0;">暂无数据</td>
+              <td><button class="remove-btn" onclick="removeFromWatchlist('${stock.code}')">移除</button></td>
+            </tr>
+          `;
+        }
+
+        const isUp = q.changePercent >= 0;
+        const changeClass = isUp ? 'up' : 'down';
+        const sign = isUp ? '+' : '';
+        const marketCap = q.totalMarketCap ? (q.totalMarketCap / 100000000).toFixed(0) + '亿' : '--';
+          
+          // 资金流向数据（万元）
+          const mainNet = q.mainNetInflow || 0;
+          const mainNetWan = (mainNet / 10000).toFixed(0);
+          const mainNetStr = mainNet >= 0 ? `+${mainNetWan}万` : `${mainNetWan}万`;
+          const mainNetClass = mainNet >= 0 ? 'up' : 'down';
+          
+          const superLargeNet = q.superLargeNet || 0;
+          const largeNet = q.largeNet || 0;
+          const mediumNet = q.mediumNet || 0;
+          const smallNet = q.smallNet || 0;
+          
+          // 格式化资金显示
+          const formatFund = (val) => {
+            const wan = val / 10000;
+            if (Math.abs(wan) >= 10000) {
+              return (wan / 10000).toFixed(2) + '亿';
+            }
+            return wan.toFixed(0) + '万';
+          };
+
+          return `
+            <tr>
+              <td>
+                <div class="stock-name">
+                  <span class="name">${q.name}</span>
+                  <span class="code">${q.code} · ${stock.market}</span>
+                </div>
+              </td>
+              <td class="price">¥${q.price.toFixed(2)}</td>
+              <td>
+                <div class="change">
+                  <span class="change-percent ${changeClass}">${sign}${q.changePercent.toFixed(2)}%</span>
+                  <span class="change-amount">${sign}${q.change.toFixed(2)}</span>
+                </div>
+              </td>
+              <td>
+                <div class="fund-flow">
+                  <span class="fund-main ${mainNetClass}">${mainNetStr}</span>
+                  <span class="fund-detail">超:${formatFund(superLargeNet)} 大:${formatFund(largeNet)}</span>
+                </div>
+              </td>
+              <td class="market-cap">${marketCap}</td>
+              <td><button class="remove-btn" onclick="removeFromWatchlist('${stock.code}')">移除</button></td>
+            </tr>
+          `;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th>股票名称</th>
+              <th>最新价</th>
+              <th>涨跌幅</th>
+              <th>主力资金流向</th>
+              <th>总市值</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    async function addToWatchlist(code, name, market) {
+      const result = await apiCall('/watchlist/add', { code, name, market });
+      
+      if (result.success) {
+        showToast(`已添加 ${name} 到自选股`, 'success');
+        document.getElementById('searchResults').classList.remove('show');
+        document.getElementById('searchInput').value = '';
+        loadWatchlist();
+      } else {
+        showToast(result.error, 'error');
+      }
+    }
+
+    async function removeFromWatchlist(code) {
+      const result = await apiCall('/watchlist/remove', { code });
+      
+      if (result.success) {
+        showToast('已从自选股移除', 'success');
+        loadWatchlist();
+      } else {
+        showToast(result.error, 'error');
+      }
+    }
+
+    // ============ 通知 ============
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // ============ 初始化 ============
+
+    // 页面加载时获取自选股
+    loadWatchlist();
+
+    // 自动刷新（每30秒）
+    setInterval(loadWatchlist, 30000);
+  </script>
+</body>
+</html>

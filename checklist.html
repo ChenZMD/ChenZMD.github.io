@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI量化交易Agent · 从零落地全流程清单</title>
+<style>
+:root{
+  --bg:#030712;--bg-surface:#0f172a;--bg-surface-hover:#1e293b;
+  --border:#1e293b;--border-active:#f59e0b26;
+  --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#475569;
+  --accent:#f59e0b;--accent2:#06b6d4;
+  --positive:#10b981;--negative:#ef4444;--warning:#f59e0b;
+  --radius:12px;--radius-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+
+/*星空背景*/
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse at 50% 0%,#0c1929 0%,var(--bg) 70%);
+}
+.stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.star{
+  position:absolute;width:1px;height:1px;background:#fff;
+  border-radius:50%;animation:twinkle 3s infinite alternate;
+}
+@keyframes twinkle{0%{opacity:0.2}100%{opacity:0.8}}
+
+/*主容器*/
+.container{
+  position:relative;z-index:1;
+  max-width:1100px;margin:0 auto;padding:24px 20px 80px;
+}
+
+/*头部*/
+.header{
+  text-align:center;padding:48px 20px 40px;
+  border-bottom:1px solid var(--border);margin-bottom:32px;
+}
+.header h1{
+  font-size:28px;font-weight:700;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+.header .subtitle{
+  color:var(--text-muted);font-size:14px;margin-bottom:16px;
+}
+.header .tag{
+  display:inline-block;padding:4px 12px;margin:0 4px;
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:20px;font-size:11px;color:var(--text-muted);
+}
+
+/*进度汇总*/
+.progress-summary{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+  margin-bottom:32px;
+}
+.progress-card{
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;text-align:center;
+  transition:all 0.3s;
+}
+.progress-card:hover{border-color:var(--accent)}
+.progress-card .value{
+  font-size:28px;font-weight:700;color:var(--accent);
+}
+.progress-card .label{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+/*阶段卡片*/
+.phase{
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:20px;overflow:hidden;
+  transition:border-color 0.3s;
+}
+.phase:hover{border-color:var(--border-active)}
+.phase-header{
+  display:flex;align-items:center;gap:16px;
+  padding:20px 24px;cursor:pointer;user-select:none;
+  background:var(--bg-surface);border-bottom:1px solid transparent;
+  transition:all 0.3s;
+}
+.phase-header:hover{background:rgba(245,158,11,0.04)}
+.phase-header.open{border-bottom-color:var(--border)}
+.phase-icon{
+  width:40px;height:40px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.phase-title{flex:1}
+.phase-title h3{font-size:16px;font-weight:600;margin-bottom:2px}
+.phase-title p{font-size:12px;color:var(--text-muted)}
+.phase-progress{
+  display:flex;align-items:center;gap:8px;font-size:12px;
+  color:var(--text-muted);flex-shrink:0;
+}
+.phase-progress .bar{
+  width:60px;height:6px;background:var(--bg);
+  border-radius:3px;overflow:hidden;
+}
+.phase-progress .bar-fill{
+  height:100%;background:var(--positive);border-radius:3px;
+  transition:width 0.5s ease;
+}
+.phase-toggle{
+  width:28px;height:28px;border-radius:50%;
+  border:1px solid var(--border);background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 0.3s;flex-shrink:0;
+}
+.phase-header.open .phase-toggle{transform:rotate(180deg)}
+
+/*步骤列表*/
+.phase-content{
+  display:none;padding:0 24px 20px;
+}
+.phase-content.open{display:block}
+
+/*步骤项*/
+.step{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 16px;margin:8px 0;
+  background:rgba(15,23,42,0.4);border-radius:var(--radius-sm);
+  border:1px solid transparent;transition:all 0.2s;
+}
+.step:hover{border-color:var(--border);background:rgba(15,23,42,0.6)}
+.step.completed{
+  background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.15);
+}
+.step-checkbox{
+  width:18px;height:18px;border-radius:4px;
+  border:2px solid var(--text-dim);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px;transition:all 0.2s;
+}
+.step-checkbox.checked{
+  background:var(--positive);border-color:var(--positive);
+}
+.step-checkbox.checked::after{
+  content:'✓';color:#fff;font-size:11px;font-weight:700;
+}
+.step-content{flex:1;min-width:0}
+.step-title{font-size:13px;font-weight:500;line-height:1.5}
+.step.completed .step-title{color:var(--positive);text-decoration:line-through}
+.step-desc{font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.6}
+.step-tag{
+  display:inline-block;padding:2px 8px;margin:4px 4px 0 0;
+  background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);
+  border-radius:10px;font-size:10px;color:var(--accent);
+}
+.step-tag.done{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);color:var(--positive)}
+
+/*核心原则*/
+.principles{
+  background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);
+  border-radius:var(--radius);padding:24px;margin-bottom:32px;
+}
+.principles h3{
+  font-size:16px;color:var(--accent);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.principles-list{list-style:none}
+.principles-list li{
+  padding:10px 0 10px 28px;position:relative;
+  font-size:13px;line-height:1.6;border-bottom:1px solid rgba(245,158,11,0.08);
+}
+.principles-list li:last-child{border-bottom:none}
+.principles-list li::before{
+  content:'';position:absolute;left:8px;top:16px;
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+}
+
+/*保存状态提示*/
+.save-indicator{
+  position:fixed;top:20px;right:20px;z-index:1000;
+  padding:10px 16px;border-radius:var(--radius-sm);
+  background:var(--positive);color:#fff;font-size:12px;
+  opacity:0;transform:translateY(-10px);transition:all 0.3s;
+  pointer-events:none;
+}
+.save-indicator.show{opacity:1;transform:translateY(0)}
+
+/*响应式*/
+@media(max-width:768px){
+  .progress-summary{grid-template-columns:repeat(2,1fr)}
+  .header h1{font-size:22px}
+  .phase-header{padding:16px}
+  .phase-content{padding:0 16px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="save-indicator" id="saveIndicator">✓ 进度已保存</div>
+
+<div class="container">
+  <div class="header">
+    <h1>AI量化交易Agent · 从零落地全流程</h1>
+    <p class="subtitle">7大阶段 · 36个可落地步骤 · 个人私有量化系统搭建清单</p>
+    <div>
+      <span class="tag">多模型蒸馏</span>
+      <span class="tag">分层Agent</span>
+      <span class="tag">跨板块共振</span>
+      <span class="tag">人脑逻辑优先</span>
+    </div>
+  </div>
+
+  <!-- 进度汇总 -->
+  <div class="progress-summary">
+    <div class="progress-card">
+      <div class="value" id="completedCount">0</div>
+      <div class="label">已完成步骤</div>
+    </div>
+    <div class="progress-card">
+      <div class="value" id="totalSteps">36</div>
+      <div class="label">总步骤</div>
+    </div>
+    <div class="progress-card">
+      <div class="value" id="progressPercent">0%</div>
+      <div class="label">完成进度</div>
+    </div>
+    <div class="progress-card">
+      <div class="value" id="daysElapsed">0</div>
+      <div class="label">已用天数</div>
+    </div>
+  </div>
+
+  <!-- 核心前置原则 -->
+  <div class="principles">
+    <h3>⚡ 核心前置原则（必须遵守，否则全部无效）</h3>
+    <ul class="principles-list">
+      <li><strong>人脑逻辑100%优先</strong>：AI只负责复刻、执行、迭代，绝不自主生成交易逻辑</li>
+      <li><strong>拒绝单模型硬喂Prompt</strong>：所有交易规则必须经过「多模型蒸馏筛选」</li>
+      <li><strong>分层架构严格执行</strong>：信息层 → 逻辑层 → 板块研判层 → 跨板块共振层 → 交易执行层 → 复盘迭代层</li>
+      <li><strong>国内模型主力、海外模型离线蒸馏</strong>：规避封号、风控、成本、发票、链路问题</li>
+      <li><strong>所有信号必须四重验证</strong>：数据验证 + 政策验证 + 资金验证 + 跨板块联动验证</li>
+    </ul>
+  </div>
+
+  <!-- 阶段列表 -->
+  <div id="phases"></div>
+
+  <!-- 终极目标 -->
+  <div class="principles" style="margin-top:32px;border-color:rgba(16,185,129,0.2);background:rgba(16,185,129,0.05)">
+    <h3 style="color:var(--positive)">🎯 终极成型结果</h3>
+    <ul class="principles-list">
+      <li>信息自动抓取 → 多模型逻辑蒸馏 → 多行业独立研判</li>
+      <li>跨板块共振预判 → 智能仓位风控 → 全自动复盘迭代</li>
+      <li><strong>这是目前个人能做的最高阶量化体系，无机构同质化、无AI同质化</strong></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// 星空背景
+(function(){
+  const s=document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const d=document.createElement('div');
+    d.className='star';
+    d.style.left=Math.random()*100+'%';
+    d.style.top=Math.random()*100+'%';
+    d.style.animationDelay=Math.random()*3+'s';
+    s.appendChild(d);
+  }
+})();
+
+// 阶段数据
+const phases=[
+  {
+    icon:'🏗️',title:'第一阶段：底层基建搭建',subtitle:'信息抓取层 · 预计0-3天完成',steps:[
+      {title:'搭建全网财经信息自动归档源',desc:'收集五类底层数据：宏观数据(海关进出口/航运指数/PMI/社融)、产业数据(电力负荷/新能源产销/机器人产业链)、事件数据(政策文件/产业公告/卡脖子技术突破)、天气周期(台风/极端气温/港口停运)、二级市场(板块异动/连板梯队/资金流动)',tags:['数据源','自动化']},
+      {title:'搭建自动化爬虫/订阅源',desc:'官方数据源订阅(政府网/工信部/海关总署)、财经平台(同花顺iFinD/东方财富/Trading Economics)、舆情源(官媒发布时间线)、自动保存每日事件时间线文档',tags:['爬虫','订阅']},
+      {title:'建立每日素材库模板',desc:'固定四文件每日自动更新：①今日宏观数据汇总 ②今日产业新闻时间线 ③今日板块资金异动 ④今日风险事件汇总',tags:['模板','素材库']}
+    ]
+  },
+  {
+    icon:'🧠',title:'第二阶段：个人交易认知标准化',subtitle:'壁垒核心 · 预计3-7天',steps:[
+      {title:'把大脑模糊逻辑写成规则文本',desc:'固化四类私有规则：①资金运行规则(资金先走/消息后补/利好落地兑现/预期前置炒作) ②周期判断规则(月/季/半年/年级别趋势标准) ③逆向判断规则(高错误率反向指标/情绪极值反转) ④板块联动规则(上游→中游→下游传导/出口→产能→财报传导)',tags:['规则化','认知']},
+      {title:'建立《私有交易规则手册》',desc:'固定结构：上涨成立条件、下跌成立条件、震荡过滤条件、假突破识别规则、利好出货识别规则、真趋势启动共振规则',tags:['手册','标准']},
+      {title:'整理过往所有复盘案例',desc:'把历史成功/失败交易全部归档，形成案例训练数据集。包含入场逻辑、持仓过程、止损点、盈亏原因、情绪记录',tags:['复盘','数据集']}
+    ]
+  },
+  {
+    icon:'⚗️',title:'第三阶段：多模型认知蒸馏系统',subtitle:'整套体系最核心 · 预计7-15天',steps:[
+      {title:'模型分工架构（固定最优搭配）',desc:'国内在线主力：Kimi(长文本逻辑梳理/复盘归档)、字节大模型(快速研判/数据总结)、DeepSeek(量化逻辑推理)。海外离线辅助：GPT4/Claude(深度逻辑拆解/反向推演/错误复盘，禁止高频在线交易调用)',tags:['模型分工','架构']},
+      {title:'执行「多模型分散投喂蒸馏法」',desc:'①将同一套交易规则分别投喂给6个不同基座模型 ②让每个模型独立输出判断/逻辑/风险/漏洞/反例 ③人工汇总所有输出 ④人工筛选有效逻辑、剔除模型幻觉、统一规则 ⑤沉淀为唯一私有标准规则库',tags:['蒸馏','核心']},
+      {title:'建立模型纠错机制',desc:'①记录每个模型的固定缺点 ②建立「模型错误黑名单库」③不同模型短板互相弥补',tags:['纠错','优化']},
+      {title:'完成「个人认知AI化固化」',desc:'此时你的交易逻辑已经变成AI可24小时执行的私有模型。市面99%的人只用单模型Prompt，你用私有蒸馏模型，直接降维打击',tags:['壁垒','成型']}
+    ]
+  },
+  {
+    icon:'🤖',title:'第四阶段：垂直板块独立Agent搭建',subtitle:'单板块研判 · 预计15-25天',steps:[
+      {title:'搭建【外贸自贸区Agent】',desc:'专属数据源：港口吞吐量/航运指数/机电出口/跨境结算/自贸区政策。专属逻辑：出口拐点→产能拐点→财报拐点→资金炒作拐点',tags:['外贸','自贸区']},
+      {title:'搭建【电力周期+高耗能产业Agent】',desc:'覆盖：电解铝、化工、硅料、锂电、工业开工率。数据源：电网负荷数据、高耗能行业开工率、新能源消纳数据',tags:['电力','高耗能']},
+      {title:'搭建【科技卡脖子Agent】',desc:'覆盖：半导体、机器人、低空经济、量子、AI硬件。数据源：政策文件/技术突破公告/产业链动态',tags:['科技','卡脖子']},
+      {title:'搭建【天气周期Agent】',desc:'判断：港口停工、工业减产、供需错配、季节性行情。数据源：台风路径/极端温度预报/厄尔尼诺数据',tags:['天气','周期']},
+      {title:'每个Agent固定输出标准化',desc:'统一输出格式：①今日板块景气度评分(1-10分) ②今日利多/利空逻辑(3条以内) ③当前所处周期位置 ④明日潜在催化事件 ⑤风险点(2条以内)',tags:['标准化','输出']}
+    ]
+  },
+  {
+    icon:'🔗',title:'第五阶段：跨板块联动预判系统',subtitle:'从看盘→预判 · 预计25-32天',steps:[
+      {title:'建立「多板块共振判定规则」',desc:'单板块信号=无效 | 双板块联动=弱信号 | 三板块以上共振=高确定性信号。共振信号需配合仓位算法使用',tags:['共振','规则']},
+      {title:'搭建传导逻辑链库',desc:'固定可复用传导链：①出口↑→制造业景气↑→设备订单↑→产业链上涨 ②电力负荷↑→工业开工↑→资源需求↑ ③政策落地→产能扩张→未来财报预增→资金提前炒作',tags:['传导链','库']},
+      {title:'建立「未来1-3-7-30天事件预判表」',desc:'AI自动滚动预判未来催化事件，提前布局。例如：某船企30天后交付→航运指数可能异动→电力需求增加→相关板块提前反应',tags:['预判','时间表']},
+      {title:'生成每日《市场全景预判报告》',desc:'每日开盘前自动生成：①当前市场主线及强度 ②潜在切换方向 ③最强共振板块 ④明日确定性机会TOP3 ⑤需规避的风险板块',tags:['报告','全景']}
+    ]
+  },
+  {
+    icon:'💰',title:'第六阶段：交易执行+风控系统落地',subtitle:'全自动交易逻辑 · 预计32-40天',steps:[
+      {title:'信号过滤层级（四层过滤杜绝垃圾信号）',desc:'第一层：数据真实性过滤（排除虚假数据/延迟数据）第二层：政策逻辑过滤（排除伪政策利好）第三层：资金行为过滤（排除无资金配合的信号）第四层：跨板块共振过滤（排除单板块孤立信号）',tags:['过滤','风控']},
+      {title:'仓位算法落地',desc:'核心规则：①共振强度决定仓位大小（弱信号≤2成、中等3-5成、强共振≤8成）②风险等级决定仓位上限 ③单一板块防重仓（≤3成）',tags:['仓位','算法']},
+      {title:'止损止盈AI自动化判定',desc:'AI根据波动率、情绪周期、板块强度自动生成动态止盈止损。不止是固定点位，而是动态跟踪市场变化',tags:['止损','动态']},
+      {title:'极端行情风控规则',desc:'自动识别：黑天鹅事件、突发利空、情绪退潮、高位退潮。触发条件后自动降仓/空仓，无需人工干预',tags:['风控','极端']}
+    ]
+  },
+  {
+    icon:'🔄',title:'第七阶段：自动复盘迭代闭环',subtitle:'永久运行 · 40天以后常态化',steps:[
+      {title:'搭建Trace日志系统',desc:'记录每一次AI：输入数据、推理过程、判断依据、出错点、遗漏逻辑。完整可追溯，便于后续优化',tags:['日志','追溯']},
+      {title:'每日自动复盘',desc:'每日收盘后自动执行：①今日信号胜率统计 ②错误案例归类（按类型/板块/逻辑链）③规则漏洞修补 ④模型参数微调',tags:['复盘','日常']},
+      {title:'每周一次大迭代',desc:'周末执行：重新蒸馏逻辑、更新传导链、优化共振规则、清理过时模型、更新训练数据集',tags:['迭代','周度']}
+    ]
+  }
+];
+
+// 渲染阶段
+const phasesEl=document.getElementById('phases');
+phases.forEach((phase,pi)=>{
+  const phaseEl=document.createElement('div');
+  phaseEl.className='phase';
+  phaseEl.innerHTML=`
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(6,188,212,0.15))">${phase.icon}</div>
+      <div class="phase-title">
+        <h3>${phase.title}</h3>
+        <p>${phase.subtitle}</p>
+      </div>
+      <div class="phase-progress">
+        <span id="pp-${pi}">0/${phase.steps.length}</span>
+        <div class="bar"><div class="bar-fill" id="pb-${pi}" style="width:0%"></div></div>
+      </div>
+      <div class="phase-toggle">▼</div>
+    </div>
+    <div class="phase-content" id="pc-${pi}">
+      ${phase.steps.map((step,si)=>`
+        <div class="step" id="step-${pi}-${si}" onclick="toggleStep(${pi},${si})">
+          <div class="step-checkbox" id="cb-${pi}-${si}"></div>
+          <div class="step-content">
+            <div class="step-title">步骤${getStepNum(pi,si)}：${step.title}</div>
+            <div class="step-desc">${step.desc}</div>
+            <div>${step.tags.map(t=>`<span class="step-tag">${t}</span>`).join('')}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  phasesEl.appendChild(phaseEl);
+});
+
+// 计算全局步骤编号
+function getStepNum(pi,si){
+  let n=0;
+  for(let i=0;i<pi;i++)n+=phases[i].steps.length;
+  return n+si+1;
+}
+
+// 折叠/展开阶段
+function togglePhase(el){
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+// 切换步骤完成状态
+function toggleStep(pi,si){
+  const key=`step_${pi}_${si}`;
+  const stepEl=document.getElementById(`step-${pi}-${si}`);
+  const cbEl=document.getElementById(`cb-${pi}-${si}`);
+  const completed=localStorage.getItem(key)==='1';
+  
+  if(completed){
+    localStorage.removeItem(key);
+    stepEl.classList.remove('completed');
+    cbEl.classList.remove('checked');
+  }else{
+    localStorage.setItem(key,'1');
+    stepEl.classList.add('completed');
+    cbEl.classList.add('checked');
+  }
+  
+  updateProgress();
+  showSave();
+}
+
+// 更新进度
+function updateProgress(){
+  let total=0,completed=0;
+  phases.forEach((phase,pi)=>{
+    let phaseCompleted=0;
+    phase.steps.forEach((step,si)=>{
+      total++;
+      if(localStorage.getItem(`step_${pi}_${si}`)==='1'){
+        completed++;
+        phaseCompleted++;
+      }
+    });
+    // 更新阶段进度
+    const ppEl=document.getElementById(`pp-${pi}`);
+    const pbEl=document.getElementById(`pb-${pi}`);
+    if(ppEl)ppEl.textContent=`${phaseCompleted}/${phase.steps.length}`;
+    if(pbEl)pbEl.style.width=(phaseCompleted/phase.steps.length*100)+'%';
+  });
+  
+  // 更新汇总
+  document.getElementById('completedCount').textContent=completed;
+  document.getElementById('totalSteps').textContent=total;
+  document.getElementById('progressPercent').textContent=Math.round(completed/total*100)+'%';
+  
+  // 计算已用天数
+  const startDate=localStorage.getItem('startDate');
+  if(!startDate){
+    localStorage.setItem('startDate',Date.now());
+  }else{
+    const days=Math.floor((Date.now()-parseInt(startDate))/86400000);
+    document.getElementById('daysElapsed').textContent=days;
+  }
+}
+
+// 显示保存提示
+function showSave(){
+  const el=document.getElementById('saveIndicator');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1500);
+}
+
+// 初始化：恢复已完成状态
+phases.forEach((phase,pi)=>{
+  phase.steps.forEach((step,si)=>{
+    if(localStorage.getItem(`step_${pi}_${si}`)==='1'){
+      document.getElementById(`step-${pi}-${si}`).classList.add('completed');
+      document.getElementById(`cb-${pi}-${si}`).classList.add('checked');
+    }
+  });
+});
+
+// 默认展开第一阶段
+document.querySelector('.phase-header').classList.add('open');
+document.querySelector('.phase-content').classList.add('open');
+
+// 初始化进度
+updateProgress();
+</script>
+</body>
+</html>

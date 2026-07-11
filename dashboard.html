@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI量化交易Agent · 项目执行仪表盘</title>
+<style>
+:root{
+  --bg:#030712;--surface:#0f172a;--surface2:#1e293b;
+  --border:#1e293b;--text:#f8fafc;--muted:#94a3b8;--dim:#475569;
+  --accent:#f59e0b;--accent2:#06b6d4;
+  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse at 50% 0%,#0c1929 0%,var(--bg) 70%);
+}
+.container{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:24px 20px}
+
+/* Header */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:24px;
+}
+.header h1{
+  font-size:22px;font-weight:700;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.header-right{display:flex;align-items:center;gap:12px}
+.status-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.status-text{font-size:12px;color:var(--muted)}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;transition:all 0.3s;
+}
+.card:hover{border-color:var(--accent)}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:rgba(245,158,11,0.1);
+}
+.card-title{font-size:13px;font-weight:600}
+.card-value{font-size:24px;font-weight:700;color:var(--accent)}
+.card-desc{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* Phase Progress */
+.phases-section{margin-bottom:24px}
+.section-title{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.phase-row{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;margin:6px 0;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;transition:all 0.2s;
+}
+.phase-row:hover{border-color:var(--accent)}
+.phase-num{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.phase-num.done{background:var(--green);color:#fff}
+.phase-num.active{background:var(--accent);color:#000}
+.phase-num.pending{background:var(--surface2);color:var(--dim)}
+.phase-info{flex:1}
+.phase-name{font-size:13px;font-weight:500}
+.phase-sub{font-size:11px;color:var(--muted)}
+.phase-bar{
+  width:80px;height:6px;background:var(--bg);
+  border-radius:3px;overflow:hidden;flex-shrink:0;
+}
+.phase-bar-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.phase-bar-fill.done{background:var(--green)}
+.phase-bar-fill.active{background:var(--accent)}
+.phase-pct{font-size:11px;color:var(--muted);width:40px;text-align:right;flex-shrink:0}
+
+/* Data Sources */
+.sources-section{margin-bottom:24px}
+.source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.source-item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;
+}
+.source-status{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.source-status.online{background:var(--green)}
+.source-status.offline{background:var(--red)}
+.source-status.config{background:var(--yellow)}
+.source-name{flex:1;font-size:12px}
+.source-detail{font-size:10px;color:var(--dim)}
+
+/* Quick Actions */
+.actions-section{margin-bottom:24px}
+.action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.action-btn{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:16px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);cursor:pointer;transition:all 0.2s;
+  text-decoration:none;color:var(--text);
+}
+.action-btn:hover{border-color:var(--accent);background:rgba(245,158,11,0.05)}
+.action-btn .icon{font-size:20px}
+.action-btn .label{font-size:11px;text-align:center}
+
+/* Live Data */
+.live-section{margin-bottom:24px}
+.live-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.live-item{
+  padding:12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;text-align:center;
+}
+.live-label{font-size:10px;color:var(--dim);margin-bottom:4px}
+.live-value{font-size:16px;font-weight:600}
+.live-change{font-size:11px;margin-top:2px}
+.live-change.up{color:var(--green)}
+.live-change.down{color:var(--red)}
+
+/* Footer */
+.footer{
+  text-align:center;padding:20px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--dim);
+}
+
+@media(max-width:768px){
+  .grid{grid-template-columns:1fr}
+  .source-grid{grid-template-columns:1fr}
+  .action-grid{grid-template-columns:repeat(2,1fr)}
+  .live-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>🚀 AI量化交易Agent · 项目执行仪表盘</h1>
+    <div class="header-right">
+      <div class="status-dot"></div>
+      <div class="status-text">系统运行中 · <span id="currentTime"></span></div>
+    </div>
+  </div>
+
+  <!-- 核心指标 -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div class="card-title">项目总进度</div>
+      </div>
+      <div class="card-value" id="totalProgress">6/26</div>
+      <div class="card-desc">已完成步骤 / 总步骤</div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📡</div>
+        <div class="card-title">数据源状态</div>
+      </div>
+      <div class="card-value" id="dataSources">3/5</div>
+      <div class="card-desc">在线数据源 / 总数据源</div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📅</div>
+        <div class="card-title">已执行天数</div>
+      </div>
+      <div class="card-value" id="daysCount">1</div>
+      <div class="card-desc">项目启动天数</div>
+    </div>
+  </div>
+
+  <!-- 阶段进度 -->
+  <div class="phases-section">
+    <div class="section-title">📋 七阶段执行进度</div>
+    <div id="phasesList"></div>
+  </div>
+
+  <!-- 实时数据 -->
+  <div class="live-section">
+    <div class="section-title">📈 实时市场数据</div>
+    <div class="live-grid" id="liveData">
+      <div class="live-item">
+        <div class="live-label">EUR/USD</div>
+        <div class="live-value" id="liveEUR">--</div>
+        <div class="live-change" id="liveEURChg">--</div>
+      </div>
+      <div class="live-item">
+        <div class="live-label">USD/CNY</div>
+        <div class="live-value" id="liveCNY">--</div>
+        <div class="live-change" id="liveCNYChg">--</div>
+      </div>
+      <div class="live-item">
+        <div class="live-label">USD/JPY</div>
+        <div class="live-value" id="liveJPY">--</div>
+        <div class="live-change" id="liveJPYChg">--</div>
+      </div>
+      <div class="live-item">
+        <div class="live-label">BTC/USD</div>
+        <div class="live-value" id="liveBTC">--</div>
+        <div class="live-change" id="liveBTCChg">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据源状态 -->
+  <div class="sources-section">
+    <div class="section-title">🔌 数据源连接状态</div>
+    <div class="source-grid" id="sourcesList"></div>
+  </div>
+
+  <!-- 快捷操作 -->
+  <div class="actions-section">
+    <div class="section-title">⚡ 快捷操作</div>
+    <div class="action-grid">
+      <a class="action-btn" href="checklist.html">
+        <span class="icon">📋</span>
+        <span class="label">全流程清单</span>
+      </a>
+      <a class="action-btn" href="chart.html">
+        <span class="icon">🗺️</span>
+        <span class="label">地图可视化</span>
+      </a>
+      <a class="action-btn" href="javascript:void(0)" onclick="refreshData()">
+        <span class="icon">🔄</span>
+        <span class="label">刷新数据</span>
+      </a>
+      <a class="action-btn" href="javascript:void(0)" onclick="runCollector()">
+        <span class="icon">📡</span>
+        <span class="label">运行采集器</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <div class="footer">
+    AI量化交易Agent · 项目执行仪表盘 v1.0 | 数据每30秒自动刷新
+  </div>
+</div>
+
+<script>
+// 更新时间
+function updateTime(){
+  document.getElementById('currentTime').textContent=new Date().toLocaleString('zh-CN');
+}
+setInterval(updateTime,1000);
+updateTime();
+
+// 阶段数据
+const phases=[
+  {name:'底层基建',sub:'信息抓取',steps:3,done:3},
+  {name:'认知标准化',sub:'交易规则',steps:3,done:1},
+  {name:'多模型蒸馏',sub:'核心壁垒',steps:4,done:1},
+  {name:'板块Agent',sub:'单板块研判',steps:5,done:0},
+  {name:'跨板块联动',sub:'预判系统',steps:4,done:0},
+  {name:'交易执行',sub:'风控系统',steps:4,done:0},
+  {name:'复盘迭代',sub:'永久运行',steps:3,done:0}
+];
+
+const phasesList=document.getElementById('phasesList');
+phases.forEach((p,i)=>{
+  const pct=Math.round(p.done/p.steps*100);
+  const status=pct===100?'done':(p.done>0?'active':'pending');
+  const fillClass=pct===100?'done':(p.done>0?'active':'');
+  phasesList.innerHTML+=`
+    <div class="phase-row">
+      <div class="phase-num ${status}">${i+1}</div>
+      <div class="phase-info">
+        <div class="phase-name">${p.name} · ${p.sub}</div>
+        <div class="phase-sub">${p.done}/${p.steps} 步骤完成</div>
+      </div>
+      <div class="phase-bar"><div class="phase-bar-fill ${fillClass}" style="width:${pct}%"></div></div>
+      <div class="phase-pct">${pct}%</div>
+    </div>`;
+});
+
+// 数据源状态
+const sources=[
+  {name:'ExchangeRate-API (外汇)',status:'online',detail:'EUR/USD=0.875'},
+  {name:'CoinGecko (加密货币)',status:'online',detail:'BTC/ETH实时'},
+  {name:'Open-Meteo (天气)',status:'online',detail:'10个港口城市'},
+  {name:'TradingEconomics (商品)',status:'config',detail:'需API Key'},
+  {name:'东方财富 (股票)',status:'config',detail:'需爬虫配置'}
+];
+
+const sourcesList=document.getElementById('sourcesList');
+sources.forEach(s=>{
+  sourcesList.innerHTML+=`
+    <div class="source-item">
+      <div class="source-status ${s.status}"></div>
+      <div class="source-name">${s.name}</div>
+      <div class="source-detail">${s.detail}</div>
+    </div>`;
+});
+
+// 获取实时数据
+async function fetchLiveData(){
+  try{
+    const forex=await fetch('https://api.exchangerate-api.com/v4/latest/USD').then(r=>r.json());
+    if(forex.rates){
+      document.getElementById('liveEUR').textContent=forex.rates.EUR.toFixed(4);
+      document.getElementById('liveCNY').textContent=forex.rates.CNY.toFixed(4);
+      document.getElementById('liveJPY').textContent=forex.rates.JPY.toFixed(2);
+    }
+  }catch(e){}
+  
+  try{
+    const crypto=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true').then(r=>r.json());
+    if(crypto.bitcoin){
+      document.getElementById('liveBTC').textContent='$'+crypto.bitcoin.usd.toLocaleString();
+      const chg=crypto.bitcoin.usd_24h_change;
+      const el=document.getElementById('liveBTCChg');
+      el.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
+      el.className='live-change '+(chg>=0?'up':'down');
+    }
+  }catch(e){}
+}
+
+function refreshData(){
+  fetchLiveData();
+  alert('数据刷新请求已发送');
+}
+
+function runCollector(){
+  alert('请在终端运行: node data-collector.cjs');
+}
+
+// 初始加载+定时刷新
+fetchLiveData();
+setInterval(fetchLiveData,30000);
+</script>
+</body>
+</html>
