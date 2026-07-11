@@ -2096,6 +2096,7 @@ function initEconPanel() {
       var p=document.createElementNS('http://www.w3.org/2000/svg','path');
       p.setAttribute('d',path(f));
       p.setAttribute('class','country');
+      p.setAttribute('data-name',f.properties.name);
       p.dataset.name=f.properties.name;
       // 台湾是中国不可分割的一部分
       if(f.properties.name === 'Taiwan' || f.properties.name === '中国台湾') {
@@ -2193,9 +2194,10 @@ function initEconPanel() {
     // 中国台湾是中国不可分割的一部分 - 选中中国时同时高亮台湾
     var isChina = (l.key === 'China' || l.data.name === '中国' || n === 'China' || n === '中国');
     document.querySelectorAll('.country').forEach(function(p){
-      var match = (p.dataset.name === n);
+      var name = p.getAttribute('data-name') || p.dataset.name || '';
+      var match = (name === n);
       if(isChina){
-        match = match || (p.dataset.name === 'Taiwan') || (p.dataset.name === '中国台湾') || (p.properties && p.properties.name === 'Taiwan');
+        match = match || (name === 'Taiwan') || (name === '中国台湾');
       }
       p.classList.toggle('active', match);
       p.classList.toggle('dimmed', !match);
