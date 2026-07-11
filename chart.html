@@ -125,7 +125,7 @@ body{
 }
 
 /* ========== 地图区域 ========== */
-.map-section{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.map-section{position:relative;display:flex;align-items:center;justify-content:center}
 
 /* 地图光晕 */
 .map-glow{
@@ -477,7 +477,7 @@ body{
   <main class="main-content">
     <section class="map-section">
       <div class="map-glow"></div>
-      <svg class="map-svg"><g id="countries"></g></svg>
+      <svg class="map-svg" overflow="visible"><g id="countries"></g></svg>
       <canvas class="flow-canvas"></canvas>
       <div class="map-controls">
         <div class="ctrl-group">
@@ -1594,16 +1594,18 @@ function makeProj(w,h){
 function makePath(proj,w,h){
   return function(f){
     function ring(r){
-      var d='',prevX=null;
+      var d='',prevX=null,shift=0;
       for(var i=0;i<r.length;i++){
-        var p=proj(r[i]);
-        // 日期变更线穿越检测：水平位移超半宽时断开为独立子多边形
+        var pp=proj(r[i]);
+        var p=[pp[0]+shift,pp[1]];
+        // 日期变更线穿越检测：水平位移超半宽时进行连续性位移修正
         if(prevX!==null&&Math.abs(p[0]-prevX)>w*0.5){
-          // 关闭前一个子多边形，开启新的（不连线）
-          d+='Z M'+p[0].toFixed(2)+','+p[1].toFixed(2);
-        }else{
-          d+=(d?'L':'M')+p[0].toFixed(2)+','+p[1].toFixed(2);
+          // 向东跨越（坐标从大变小时）：保持右侧连续性，shift+w
+          // 向西跨越（坐标从小变大时）：保持左侧连续性，shift-w
+          if(p[0]<prevX){ shift+=w; p[0]+=w; }
+          else { shift-=w; p[0]-=w; }
         }
+        d+=(d?'L':'M')+p[0].toFixed(2)+','+p[1].toFixed(2);
         prevX=p[0];
       }
       return d+'Z';
