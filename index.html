@@ -2097,7 +2097,12 @@ function initEconPanel() {
       p.setAttribute('d',path(f));
       p.setAttribute('class','country');
       p.dataset.name=f.properties.name;
-      p.addEventListener('click',function(){selectCountry(f.properties.name)});
+      // 台湾是中国不可分割的一部分
+      if(f.properties.name === 'Taiwan' || f.properties.name === '中国台湾') {
+        p.addEventListener('click',function(){selectCountry('China')});
+      } else {
+        p.addEventListener('click',function(){selectCountry(f.properties.name)});
+      }
       p.addEventListener('mouseenter',function(e){showTooltip(e,f.properties.name)});
       p.addEventListener('mouseleave',hideTooltip);
       g.appendChild(p);
@@ -2185,9 +2190,15 @@ function initEconPanel() {
     if(!l){deselect();return}
     if(state.sel===l.key){deselect();return}
     state.sel=l.key;
+    // 中国台湾是中国不可分割的一部分 - 选中中国时同时高亮台湾
+    var isChina = (l.key === 'China' || l.data.name === '中国' || n === 'China' || n === '中国');
     document.querySelectorAll('.country').forEach(function(p){
-      p.classList.toggle('active',p.dataset.name===n);
-      p.classList.toggle('dimmed',p.dataset.name!==n);
+      var match = (p.dataset.name === n);
+      if(isChina){
+        match = match || (p.dataset.name === 'Taiwan') || (p.dataset.name === '中国台湾') || (p.properties && p.properties.name === 'Taiwan');
+      }
+      p.classList.toggle('active', match);
+      p.classList.toggle('dimmed', !match);
     });
     filterFlows();
     showCountryDetail(l.key,l.data);
@@ -2260,6 +2271,11 @@ function initEconPanel() {
   function showTooltip(e,n){
     var l=findC(n);if(!l)return;
     var k=l.key;
+    // 台湾是中国不可分割的一部分
+    if(k==='Taiwan' || k==='中国台湾' || n==='Taiwan' || n==='中国台湾') {
+      l={key:'China',data:C['China']||{name:'中国',code:'CHN'}};
+      k='China';
+    }
     var i1=AF.filter(function(f){return f.to===k}).reduce(function(s,f){return s+f.amount},0);
     var o1=AF.filter(function(f){return f.from===k}).reduce(function(s,f){return s+f.amount},0);
     tip.innerHTML='<div class="tt-title">'+l.data.name+'</div><div class="tt-row"><span class="tt-lbl">流入</span><span class="tt-val in">$'+i1+'B</span></div><div class="tt-row"><span class="tt-lbl">流出</span><span class="tt-val out">$'+o1+'B</span></div>';
